@@ -7,6 +7,8 @@ from core.display import VirtualDisplay
 from core.input_manager import InputManager
 from core.state_manager import StateManager
 from core.states import MenuState
+from game.deathscene import DeathScene
+from game.levels import get_level
 from game.play import PlayState
 
 # The window starts at this size and can be freely resized (it's created
@@ -21,8 +23,8 @@ from game.play import PlayState
 # half or a quarter of WINDOW_WIDTH/HEIGHT; VirtualDisplay does the rest.
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 540
-VIRTUAL_WIDTH = WINDOW_WIDTH
-VIRTUAL_HEIGHT = WINDOW_HEIGHT
+VIRTUAL_WIDTH = WINDOW_WIDTH/2
+VIRTUAL_HEIGHT = WINDOW_HEIGHT/2
 
 # Example bindings - core/input_manager.py's InputManager takes any
 # action-name -> key-list mapping, so replace these with whatever your
@@ -30,23 +32,40 @@ VIRTUAL_HEIGHT = WINDOW_HEIGHT
 BINDINGS = {
     "left": [pygame.K_a, pygame.K_LEFT],
     "right": [pygame.K_d, pygame.K_RIGHT],
-    "up": [pygame.K_w, pygame.K_UP],
-    "down": [pygame.K_s, pygame.K_DOWN],
+    "jump": [pygame.K_w, pygame.K_UP],
+
 }
 
-
-def build_play_state(states, input_manager, audio_manager):
+def build_play_state(states, input_manager, audio_manager, level_index=0):
+    level = get_level(level_index)
     return PlayState(
         states, input_manager, audio_manager,
         size=(VIRTUAL_WIDTH, VIRTUAL_HEIGHT),
         on_quit_to_menu=lambda: states.reset(build_menu_state(states, input_manager, audio_manager)),
+        level_path=level["level_path"],
+        tilesets_dir=level["tilesets_dir"],
+    )
+
+
+def start_level(states, input_manager, audio_manager, level_index=0):
+    """Switches to level_index's death scene; the death scene switches to
+    the level itself (already built, so it's ready the moment the player
+    advances past the death scene) once the player presses a key."""
+    level = get_level(level_index)
+    play_state = build_play_state(states, input_manager, audio_manager, level_index)
+    states.switch(
+        DeathScene(states),
+        size=(VIRTUAL_WIDTH, VIRTUAL_HEIGHT),
+        next_state=play_state,
+        level_path=level["death_path"],
+        tilesets_dir=level["death_tilesets_dir"],
     )
 
 
 def build_menu_state(states, input_manager, audio_manager):
     return MenuState(
         states, audio_manager, title="Gamejam Template",
-        on_start=lambda: states.switch(build_play_state(states, input_manager, audio_manager)),
+        on_start=lambda: start_level(states, input_manager, audio_manager, 0),
         size=(VIRTUAL_WIDTH, VIRTUAL_HEIGHT),
     )
 
@@ -56,7 +75,7 @@ def main():
     display = VirtualDisplay(
         (VIRTUAL_WIDTH, VIRTUAL_HEIGHT),
         window_size=(WINDOW_WIDTH, WINDOW_HEIGHT),
-        title="gamejam-template",
+        title="Retrace",
     )
     clock = pygame.time.Clock()
 

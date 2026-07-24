@@ -46,7 +46,7 @@ Investigation mechanic (must-have)
 
 Countdown identity (must-have — this is your theme link, don't skip)
 
- Visible countdown UI (5→0) shown at level transitions, unmistakably readable
+ Visible countdown UI (5→0) shown at level transitions
  Ghost fade — fixed alpha per level number on player sprite (cheapest version, static per level not animated)
 
 Content (must-have, but scope-flex — cut levels before cutting polish)

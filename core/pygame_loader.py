@@ -49,9 +49,9 @@ def _clip(surf, x, y, w, h):
 
 
 class TileEntry:
-    __slots__ = ("rect", "surface", "layer", "x_flip", "y_flip", "is_asset", "ramp", "pos", "tileset", "_flipped")
+    __slots__ = ("rect", "surface", "layer", "x_flip", "y_flip", "is_asset", "ramp", "pos", "tileset","props", "_flipped")
 
-    def __init__(self, rect, surface, layer, x_flip, y_flip, is_asset, ramp, pos, tileset):
+    def __init__(self, rect, surface, layer, x_flip, y_flip, is_asset, ramp, pos, tileset, props=None):
         self.rect = rect
         self.surface = surface
         self.layer = layer
@@ -62,6 +62,7 @@ class TileEntry:
         self.pos = pos
         self.tileset = tileset
         self._flipped = None
+        self.props = props or {}
 
     def get_surface(self):
         """Surface already flipped per x_flip/y_flip, ready to blit at rect.topleft."""
@@ -91,6 +92,7 @@ class _TilesetSource:
         self._raw_tiles = {}
         self._scaled_tiles = {}
         self._block_cache = {}
+        self.tile_props = {int(k): v for k, v in cfg.get("tile_props", {}).items()}
         idx = 0
         for y in range(self.rows):
             for x in range(self.cols):
@@ -274,6 +276,7 @@ class TileMap:
                 return None
             surf = tileset.block_surface(asset_def["origin"], asset_def.get("w", 1), asset_def.get("h", 1))
             ramp = asset_def.get("ramp", 0)
+            props = asset_def.get("props", {})
         else:
             tileset_name = raw.get("tileset")
             tileset = self.tilesets.get(tileset_name)
@@ -282,12 +285,15 @@ class TileMap:
             surf = tileset.tile_surface(raw.get("tile", 0))
             ramp = 0
 
+            tile_index = raw.get("tile", 0)
+            props = tileset.tile_props.get(tile_index, {})
+
         if surf is None:
             return None
 
         rect = pygame.Rect(world_x, world_y, surf.get_width(), surf.get_height())
         return TileEntry(rect, surf, raw.get("layer", 0), bool(raw.get("x_flip", False)),
-                         bool(raw.get("y_flip", False)), etype == "asset", ramp, tuple(pos), tileset_name)
+                         bool(raw.get("y_flip", False)), etype == "asset", ramp, tuple(pos), tileset_name, props)
 
     def iter_all_tiles(self, layer=None, include_hidden=False):
         for bucket in self.chunks.values():

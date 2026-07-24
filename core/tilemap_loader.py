@@ -63,6 +63,21 @@ class Level:
         pos = entities[0]["pos"] if entities else default
         return pygame.Vector2(pos)
 
+    def find_asset_rect(self, asset_id):
+        """World-pixel rect of the first placed instance of `asset_id` (an
+        id from assets.json), or None if it isn't placed in this level.
+        Lets code key off of wherever a composed-in-the-editor prop
+        actually is (e.g. drawing a shadow under it) without hardcoding
+        its position, so moving the prop in the editor doesn't desync it."""
+        ts = self.tilemap.tile_size
+        for bucket in self.tilemap.chunks.values():
+            for raw in bucket:
+                if raw.get("type") == "asset" and raw.get("asset") == asset_id:
+                    x, y = raw["pos"]
+                    w, h = raw.get("w", 1), raw.get("h", 1)
+                    return pygame.Rect(round(x * ts), round(y * ts), w * ts, h * ts)
+        return None
+
     def _draw_order(self):
         """Layer ids back-to-front. Falls back to a sorted scan if the file
         didn't carry layer_order (e.g. the legacy flat-list format)."""
@@ -91,6 +106,15 @@ class Level:
                 if entry.tileset in self.tilemap.hidden_tilesets:
                     continue
                 surface.blit(entry.get_surface(), (entry.rect.x - offset[0], entry.rect.y - offset[1]))
+
+    def get_marker_rect(self, key, value=None):
+        """First entry whose tile_props has `key` (optionally matching
+        `value`). Game-facing lookup - doesn't care which asset/tileset/index
+        was actually used to draw it."""
+        for entry in self.tilemap.iter_all_tiles(include_hidden=True):
+            if key in entry.props and (value is None or entry.props[key] == value):
+                return entry.rect
+        return None
 
     def get_solid_rects(self, camera_rect, layers=None):
         """AABB rects for collision, from self.solid_layers (or an override).

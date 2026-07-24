@@ -1,7 +1,7 @@
 import sys
 
 import pygame
-
+from game.timeline_dat import get_timeline_stuff
 from core.audio_manager import AudioManager
 from core.display import VirtualDisplay
 from core.input_manager import InputManager
@@ -10,6 +10,7 @@ from core.states import MenuState
 from game.deathscene import DeathScene
 from game.levels import get_level
 from game.play import PlayState
+from game.timeline import Timeline
 
 # The window starts at this size and can be freely resized (it's created
 # with pygame.RESIZABLE). Everything - game and UI - actually draws at
@@ -23,8 +24,9 @@ from game.play import PlayState
 # half or a quarter of WINDOW_WIDTH/HEIGHT; VirtualDisplay does the rest.
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 540
-VIRTUAL_WIDTH = WINDOW_WIDTH/2
-VIRTUAL_HEIGHT = WINDOW_HEIGHT/2
+VIRTUAL_WIDTH = WINDOW_WIDTH / 3 # 320
+VIRTUAL_HEIGHT = WINDOW_HEIGHT / 3 # 180
+#320x180
 
 # Example bindings - core/input_manager.py's InputManager takes any
 # action-name -> key-list mapping, so replace these with whatever your
@@ -35,6 +37,7 @@ BINDINGS = {
     "jump": [pygame.K_w, pygame.K_UP],
 
 }
+
 
 def build_play_state(states, input_manager, audio_manager, level_index=0):
     level = get_level(level_index)
@@ -47,16 +50,24 @@ def build_play_state(states, input_manager, audio_manager, level_index=0):
     )
 
 
+def build_timeline_state(states, input_manager, audio_manager, level_index=0):
+    return Timeline(
+        states, timeline_data=get_timeline_stuff(level_index),
+        input_manager=input_manager, audio_manager=audio_manager,
+        on_quit_to_menu=lambda: states.reset(build_menu_state(states, input_manager, audio_manager)),
+    )
+
+
 def start_level(states, input_manager, audio_manager, level_index=0):
     """Switches to level_index's death scene; the death scene switches to
     the level itself (already built, so it's ready the moment the player
     advances past the death scene) once the player presses a key."""
     level = get_level(level_index)
-    play_state = build_play_state(states, input_manager, audio_manager, level_index)
+    timeline_state = build_timeline_state(states, input_manager, audio_manager, level_index)
     states.switch(
         DeathScene(states),
         size=(VIRTUAL_WIDTH, VIRTUAL_HEIGHT),
-        next_state=play_state,
+        next_state=timeline_state,
         level_path=level["death_path"],
         tilesets_dir=level["death_tilesets_dir"],
     )
@@ -64,7 +75,7 @@ def start_level(states, input_manager, audio_manager, level_index=0):
 
 def build_menu_state(states, input_manager, audio_manager):
     return MenuState(
-        states, audio_manager, title="Gamejam Template",
+        states, audio_manager, title="Retrace",
         on_start=lambda: start_level(states, input_manager, audio_manager, 0),
         size=(VIRTUAL_WIDTH, VIRTUAL_HEIGHT),
     )
@@ -96,6 +107,11 @@ def main():
                 running = False
             display.handle_event(event)
             states.handle_event(event)
+
+        # Polled every frame (not just on MOUSEMOTION) so hover states stay
+        # correct even while the cursor sits still - display.handle_event
+        # only rewrites event.pos for events that actually fire.
+        input_manager.mouse_pos.update(display.window_to_virtual(pygame.mouse.get_pos()))
 
         states.update(dt)
         states.draw(display.surface)

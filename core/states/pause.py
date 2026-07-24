@@ -21,10 +21,11 @@ class PauseState(GameState):
     (typically manager.reset(build_menu_state())). Without it, the
     "Quit to menu" button is omitted since core has no menu to return to."""
 
-    def __init__(self, manager, audio_manager, on_quit=None, theme=None, size=None):
+    def __init__(self, manager, audio_manager, on_quit=None, quit_label="Quit to menu", theme=None, size=None):
         super().__init__(manager)
         self.audio = audio_manager
         self.on_quit = on_quit
+        self.quit_label = quit_label
         self.theme = theme or DEFAULT_THEME
         self.size = size
         scale = ui_scale((self.size or _surface_size())[0])
@@ -59,7 +60,7 @@ class PauseState(GameState):
         panel.add(Button((left, y, button_width, button_height), "Options", on_click=self._open_options, theme=self.theme, font=font))
         y += row_step
         if self.on_quit:
-            panel.add(Button((left, y, button_width, button_height), "Quit to menu", on_click=self.on_quit, theme=self.theme, font=font))
+            panel.add(Button((left, y, button_width, button_height), self.quit_label, on_click=self.on_quit, theme=self.theme, font=font))
 
     def _resume(self):
         self.manager.pop()

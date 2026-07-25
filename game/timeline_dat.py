@@ -30,6 +30,16 @@ TIMELINE_CONTS = [
             "event_type": "memory",
             "tilesets_dir": "game/assets/images/tilesets"
         }]
+    },
+    {
+        "total_age":65,
+        "events": [{
+            "age":65,
+            "level_path": "game/assets/levels/level_6.json",
+            "event_type": "memory",
+            "tilesets_dir": "game/assets/images/tilesets"
+
+        }]
     }
 ]
 

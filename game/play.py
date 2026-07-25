@@ -111,7 +111,10 @@ class PlayState(GameState):
         self._spawn_role_item("mom", "Later, she said, still on the phone. She always said later.")
         self._spawn_role_item("pill", "Four of these since noon. I told myself it was just today.", is_correct=True)
         self._spawn_role_item("deadline", "Almost done. Just needed one more night.")
-        self._spawn_role_item("")
+        self._spawn_role_item("phone", "Missed calls. I meant to call back. I always meant to.")
+        self._spawn_role_item("calendar", "No one's written on this in months. Neither have I.")
+        self._spawn_role_item("disc_phone", "Never got it reconnected. There was no one urgent enough to call.", is_correct=True)
+        self._spawn_role_item("picture", "Them, and me. I forgot I still had this. I never called.")
         for exit_entity in self.level.tilemap.get_entities("level_exit"):
             exit_image = pygame.Surface((self.level.tile_size, self.level.tile_size), pygame.SRCALPHA)
             exit_item = Item(

@@ -12,6 +12,11 @@ LEVELS = [
         "death_path": "game/assets/levels/death_2.json",
         "tilesets_dir": "game/assets/images/tilesets",
     },
+    {
+        "death_path": "game/assets/levels/death_3.json",
+        "tilesets_dir": "game/assets/images/tilesets",
+    }
+
 ]
 
 
@@ -41,6 +46,7 @@ def start_level(states, input_manager, audio_manager, size, level_index=0):
         next_state=timeline_state,
         level_path=level["death_path"],
         tilesets_dir=level["tilesets_dir"],
+        level_index=level_index,
     )
 
 

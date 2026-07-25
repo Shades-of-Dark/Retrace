@@ -16,8 +16,9 @@ class DeathScene(GameState):
     # many times smaller than the actual output size, then that capture
     # gets scaled back up to fill the frame - so the impact point reads as
     # a close, composed moment instead of a small cluster lost in a big
-    # empty street.
-    ZOOM = 2.75
+    # empty street. Indexed by level_index (0 = "level 1"); indices past
+    # the list clamp to the last entry.
+    ZOOM_BY_LEVEL = [2.75, 2.75, 1.25]
 
     # id from assets.json - the car asset placed in the composed scene.
     # Used to find where it actually is so the shadow/skid marks below
@@ -32,6 +33,7 @@ class DeathScene(GameState):
         self.next_state = None
         self.time_in_scene = 0.0
         self.car_rect = None
+        self.level_index = 0
 
     def _build_impact_fx(self):
         """Builds the shadow + skid mark surfaces once, in world space,
@@ -61,6 +63,7 @@ class DeathScene(GameState):
                 streak.set_at((x, 1), (120, 110, 100, alpha))
             world_pos = (wheel_x - streak_len, ground_y)
             self._streaks.append((streak, world_pos))
+
     def _blit_impact_fx(self, dest, camera_rect):
         """Just positions the pre-built surfaces relative to the current
         camera offset - no per-frame pixel work."""
@@ -70,9 +73,12 @@ class DeathScene(GameState):
             dest.blit(self._shadow_surf, (wx - ox, wy - oy))
         for streak, (wx, wy) in self._streaks:
             dest.blit(streak, (wx - ox, wy - oy))
-    def enter(self, size=(960, 540), next_state=None, level_path=None, tilesets_dir=None, **kwargs):
+
+    def enter(self, size=(960, 540), next_state=None, level_path=None, tilesets_dir=None, level_index=0, **kwargs):
         self.size = size
-        self.viewport_size = (size[0] / self.ZOOM, size[1] / self.ZOOM)
+        self.level_index = level_index
+        zoom = self.ZOOM_BY_LEVEL[min(level_index, len(self.ZOOM_BY_LEVEL) - 1)]
+        self.viewport_size = (size[0] / zoom, size[1] / zoom)
         self.next_state = next_state
         self.level = Level.load(
             level_path or self.DEFAULT_LEVEL_PATH,
@@ -118,16 +124,16 @@ class DeathScene(GameState):
         camera_rect = self._camera_rect()
         shot = pygame.Surface(camera_rect.size)
         shot.fill((25, 35, 60))
-        # Layer 1 (car/bike/victim) has to draw after the impact fx, or
-        # the ground tiles it shares a pass with would just paint over
-        # the shadow/skid marks. Layer 0 is the road surface itself.
-        self.level.draw(shot, camera_rect, exclude_layers=(1,))
-        self._blit_impact_fx(shot, camera_rect)
-        self.level.draw(shot, camera_rect, exclude_layers=(0,))
+        if self.level_index == 0:
+
+            self.level.draw(shot, camera_rect, exclude_layers=(1,))
+            self._blit_impact_fx(shot, camera_rect)
+            self.level.draw(shot, camera_rect, exclude_layers=(0,))
+        else:
+            self.level.draw(shot, camera_rect)
         pygame.transform.scale(shot, surface.get_size(), surface)
         if self.time_in_scene >= self.MIN_DISPLAY_TIME:
             self._draw_prompt(surface)
-
 
     def _draw_prompt(self, surface):
 

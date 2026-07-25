@@ -1,4 +1,5 @@
 import pygame
+import pygame.surfarray as surfarray
 import numpy as np
 
 
@@ -46,6 +47,14 @@ def get_image(sheet, frame, width, height, color, xoffset=0, yoffset=0, scale=0,
     # else: leave it at its native width x height
     pygame.Surface.set_colorkey(image, color)
     return image
+
+def desaturate_surface(surface, amount=0.5):
+    arr = surfarray.array3d(surface).astype(np.float32)
+    gray = arr @ [0.299, 0.587, 0.114]
+    gray = np.stack([gray] * 3, axis=-1)
+    blended = arr * (1 - amount) + gray * amount
+    return surfarray.make_surface(blended.astype(np.uint8))
+
 
 def make_alpha_mask(mask_surf):
     """Black-background/white-shape mask -> true alpha mask.

@@ -1,9 +1,8 @@
 import math
 
 import pygame
-import pygame.surfarray as surfarray
-import numpy as np
-from core.core_funcs import get_image, palette_swap
+
+from core.core_funcs import desaturate_surface, get_image, palette_swap
 from game.grass import Grass, load_grass_frames, sway_phase_delta
 from game.item import Item
 from game.levels import start_level
@@ -25,17 +24,7 @@ PROMPT_OFFSET_Y = 28
 ITEM_TEXT_SCALE = 1
 ITEM_TEXT_LINE_GAP = 2
 ITEM_TEXT_MARGIN = 12
-
 DESATURATION_BY_LEVEL = [0.0, 0.3, 0.55]
-
-
-def desaturate_surface(surface, amount=0.5):
-    arr = surfarray.array3d(surface).astype(np.float32)
-    gray = arr @ [0.299, 0.587, 0.114]
-    gray = np.stack([gray] * 3, axis=-1)
-    blended = arr * (1 - amount) + gray * amount
-    return surfarray.make_surface(blended.astype(np.uint8))
-
 
 class PlayState(GameState):
     MIN_FOUND_DISPLAY_TIME = 1.0
@@ -120,7 +109,9 @@ class PlayState(GameState):
         self._spawn_role_item("note",
                               "My own handwriting. I remember daring them to leave first, and not looking back.")
         self._spawn_role_item("mom", "Later, she said, still on the phone. She always said later.")
-
+        self._spawn_role_item("pill", "Four of these since noon. I told myself it was just today.", is_correct=True)
+        self._spawn_role_item("deadline", "Almost done. Just needed one more night.")
+        self._spawn_role_item("")
         for exit_entity in self.level.tilemap.get_entities("level_exit"):
             exit_image = pygame.Surface((self.level.tile_size, self.level.tile_size), pygame.SRCALPHA)
             exit_item = Item(

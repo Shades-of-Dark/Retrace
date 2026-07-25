@@ -9,7 +9,7 @@ LEVELS = [
         "tilesets_dir": "game/assets/images/tilesets",
     },
     {
-        "death_path": "game/assets/levels/death_1.json",
+        "death_path": "game/assets/levels/death_2.json",
         "tilesets_dir": "game/assets/images/tilesets",
     },
 ]

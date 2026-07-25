@@ -1,5 +1,5 @@
 class GameState:
-    """Base class for a single screen/mode: menu, playing, paused, etc."""
+
 
     def __init__(self, manager):
         self.manager = manager
@@ -21,8 +21,7 @@ class GameState:
 
 
 class StateManager:
-    """A stack of GameStates. push() layers a state on top (e.g. a pause
-    menu over gameplay); switch() replaces the top state entirely."""
+
 
     def __init__(self):
         self._stack = []
@@ -51,10 +50,7 @@ class StateManager:
         state.enter(**kwargs)
 
     def reset(self, state, **kwargs):
-        """Clear the whole stack and start fresh with a single state.
-        Use this instead of switch() when you need to unwind an
-        arbitrary-depth stack (e.g. options pushed on pause pushed on
-        gameplay) back to one clean state, like "quit to menu"."""
+
         while self._stack:
             self._stack.pop().exit()
         self._stack.append(state)
@@ -69,8 +65,6 @@ class StateManager:
             self.current.update(dt)
 
     def draw(self, surface):
-        # Draws the whole stack, bottom to top, so a pushed state (e.g. a
-        # pause menu) renders as an overlay on whatever is beneath it
-        # rather than hiding it.
+
         for state in self._stack:
             state.draw(surface)

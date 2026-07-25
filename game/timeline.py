@@ -3,12 +3,12 @@ import pygame
 from core.state_manager import GameState
 from core.states import PauseState
 from core.tilemap_loader import Level
-from core.camera import Camera  # adjust path if Camera lives elsewhere
+from core.camera import Camera
 from game.play import PlayState
 
 
 class Timeline(GameState):
-    def __init__(self, manager, timeline_data, input_manager=None, audio_manager=None, on_quit_to_menu=None):
+    def __init__(self, manager, timeline_data, level_index=0, input_manager=None, audio_manager=None, on_quit_to_menu=None):
         super().__init__(manager)
         self.level = None
         self.camera = None
@@ -16,6 +16,7 @@ class Timeline(GameState):
         self.next_state = None
         self.time_in_scene = 0.0
         self.timeline_data = timeline_data
+        self.level_index = level_index
         self.circle_rects = []
         self.input_manager = input_manager
         self.audio_manager = audio_manager
@@ -23,8 +24,7 @@ class Timeline(GameState):
         self.mouse_pos = (0, 0)
 
     def enter(self, size=(960, 540), next_state=None, level_path=None, tilesets_dir=None, **kwargs):
-        # self.manager.switch(Timeline(self.manager), size=screen.get_size(), next_state=NextLevelState(self.manager),
-        # level_path=..., tilesets_dir=...)
+
         self.size = size
         self.next_state = next_state
 
@@ -57,11 +57,7 @@ class Timeline(GameState):
         tilesets_dir = event_data.get("tilesets_dir", "game/assets/images/tilesets")
 
         def back_to_timeline():
-            # Pushed by PlayState -> PauseState, so two pops: close the
-            # pause overlay, then leave the memory level itself, landing
-            # back on this same Timeline instance underneath. pop() re-runs
-            # enter() on whatever it exposes, so the second pop must repass
-            # size or Timeline.enter()'s (wrong) 960x540 default sneaks back in.
+
             self.manager.pop()
             self.manager.pop(size=self.size)
 
@@ -73,6 +69,7 @@ class Timeline(GameState):
                 quit_label="Back to Timeline",
                 level_path=level_path,
                 tilesets_dir=tilesets_dir,
+                level_index=self.level_index,
             )
         )
 
@@ -102,7 +99,7 @@ class Timeline(GameState):
         radius = 15
         o = 0
         for thing in self.timeline_data["events"]:
-            center = (x + (width * thing["age"] / thing["total_age"]), surface.get_height() // 2 - radius)
+            center = (x + (width * thing["age"] / self.timeline_data["total_age"]), surface.get_height() // 2 - radius)
 
             if len(self.circle_rects) < len(self.timeline_data["events"]):
                 self.circle_rects.append({"center": center, "radius": radius, "color": (255, 255, 255)})

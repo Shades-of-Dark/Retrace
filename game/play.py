@@ -1,30 +1,50 @@
-import pygame
+import math
 
+import pygame
+import pygame.surfarray as surfarray
+import numpy as np
 from core.core_funcs import get_image, palette_swap
 from game.grass import Grass, load_grass_frames, sway_phase_delta
+from game.item import Item
+from game.levels import start_level
 from game.water import find_water_bodies, create_water
 from game.wind import WindField
 from game.tree import Tree
 from core.state_manager import GameState
 from core.states import PauseState
 from core.tilemap_loader import Level
+from core.ui.pixel_font import PixelFont
 from game.player import Player
 
 from core.camera import Camera
 
 GRASS_LAYER = 2
+GRASS_TILESET = "decor_0"
+MESSAGE_OFFSET_Y = 16
+PROMPT_OFFSET_Y = 28
+ITEM_TEXT_SCALE = 1
+ITEM_TEXT_LINE_GAP = 2
+ITEM_TEXT_MARGIN = 12
+
+DESATURATION_BY_LEVEL = [0.0, 0.3, 0.55]
+
+
+def desaturate_surface(surface, amount=0.5):
+    arr = surfarray.array3d(surface).astype(np.float32)
+    gray = arr @ [0.299, 0.587, 0.114]
+    gray = np.stack([gray] * 3, axis=-1)
+    blended = arr * (1 - amount) + gray * amount
+    return surfarray.make_surface(blended.astype(np.uint8))
 
 
 class PlayState(GameState):
-    """Starting point for the game's actual gameplay - fill in
-    handle_event/update/draw as you build it out. on_quit_to_menu is
-    called by the pause screen's "Quit to menu" button; main.py supplies
-    it so this file doesn't need to know how the menu gets built."""
+    MIN_FOUND_DISPLAY_TIME = 1.0
 
     def __init__(self, manager, input_manager, audio_manager, size, on_quit_to_menu,
                  level_path="game/assets/levels/level_1.json",
                  tilesets_dir="game/assets/images/tilesets",
-                 quit_label="Quit to menu"):
+                 quit_label="Quit to menu",
+                 level_index=0):
         super().__init__(manager)
         self.ramps = None
         self.input = input_manager
@@ -32,6 +52,15 @@ class PlayState(GameState):
         self.size = size
         self.on_quit_to_menu = on_quit_to_menu
         self.quit_label = quit_label
+        self.active_message = None
+
+        self.active_item = None
+
+        self.state = "playing"
+        self.found_item = None
+        self.found_timer = 0.0
+
+        self.level_index = level_index
 
         self.level = Level.load(level_path, tilesets_dir=tilesets_dir)
         spawn = self.level.get_spawn_point(default=(300, 100))
@@ -66,6 +95,9 @@ class PlayState(GameState):
 
         self.grass_by_tile = {}
         for entry in self.level.tilemap.iter_all_tiles(layer=GRASS_LAYER, include_hidden=True):
+
+            if entry.tileset != GRASS_TILESET:
+                continue
             self.grass_by_tile[entry.pos] = Grass.spawn_for_tile(entry.rect, grass_frames)
 
         self.water_tiles = find_water_bodies(self.level.tilemap)
@@ -77,20 +109,91 @@ class PlayState(GameState):
 
         self.wind = WindField(tile_size=self.level.tile_size)
         self.level.tilemap.remove_from_draw("tree")
-        self.bg_far = pygame.image.load("game/assets/images/parallax_far.png").convert_alpha()
-        self.bg_mid = pygame.image.load("game/assets/images/parallax_mid.png").convert_alpha()
-        self.bg_near = pygame.image.load("game/assets/images/parallax_near.png").convert_alpha()
+        self.level.tilemap.remove_from_draw(GRASS_TILESET)
+        self.bg_far = pygame.image.load("game/assets/images/backgrounds/parallax_far.png").convert_alpha()
+        self.bg_mid = pygame.image.load("game/assets/images/backgrounds/parallax_mid.png").convert_alpha()
+        self.bg_near = pygame.image.load("game/assets/images/backgrounds/parallax_near.png").convert_alpha()
+        self.items = []
+
+        self._spawn_role_item("bike", "The front wheel is loose.", is_correct=True)
+        self._spawn_role_item("ball", "I remember chasing this ball past the curb before, nothing happened that time.")
+        self._spawn_role_item("note",
+                              "My own handwriting. I remember daring them to leave first, and not looking back.")
+        self._spawn_role_item("mom", "Later, she said, still on the phone. She always said later.")
+
+        for exit_entity in self.level.tilemap.get_entities("level_exit"):
+            exit_image = pygame.Surface((self.level.tile_size, self.level.tile_size), pygame.SRCALPHA)
+            exit_item = Item(
+                image=exit_image,
+                pos=exit_entity["pos"],
+                message="",
+                on_interact=self.on_exit_interact,
+            )
+            self.items.append(exit_item)
+
+    def _spawn_role_item(self, role, message, is_correct=False):
+
+        entry = self.level.get_marker_entry("role", role)
+        if entry is None:
+            return None
+        self.level.tilemap.remove_from_draw_by_prop("role", role)
+        item = Item(
+            image=entry.get_surface(),
+            pos=entry.rect.topleft,
+            message=message,
+            is_correct=is_correct,
+            on_interact=self.on_item_interact,
+        )
+        self.items.append(item)
+        return item
 
     def _camera_rect(self):
         return pygame.Rect(round(self.camera.offset.x), round(self.camera.offset.y), self.size[0], self.size[1])
 
+    def on_item_interact(self, item):
+        if item.is_correct:
+            self.on_correct_clue_found(item)
+        else:
+            self.on_wrong_clue_found(item)
+
+    def on_exit_interact(self, item):
+
+        self.manager.pop(size=self.size)
+
+    def on_correct_clue_found(self, item):
+        self.found_item = item
+        self.found_timer = 0.0
+        self.state = "found"
+        self.show_message(item.message)
+
+    def on_wrong_clue_found(self, item):
+        self.active_item = item
+        self.show_message(item.message)
+
+    def show_message(self, text):
+        self.active_message = text
+
+    def _advance_to_next_run(self):
+
+        start_level(self.manager, self.input, self.audio, self.size, self.level_index + 1)
+
     def handle_event(self, event):
+        if self.state == "found":
+            if (self.found_timer >= self.MIN_FOUND_DISPLAY_TIME
+                    and event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN)):
+                self._advance_to_next_run()
+            return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.manager.push(PauseState(
                 self.manager, self.audio, on_quit=self.on_quit_to_menu,
                 quit_label=self.quit_label, size=self.size))
+        for item in self.items:
+            item.handle_event(event)
 
     def update(self, dt):
+        if self.state == "found":
+            self.found_timer += dt
+            return
 
         camera_rect = self._camera_rect()
         move_x = self.input.get_axis("left", "right")
@@ -100,6 +203,13 @@ class PlayState(GameState):
 
         self.player.physics_update(dt, self.level.tile_size, move_x, jump_pressed, solids, self.ramps)
         self.camera.update(dt)
+
+        for item in self.items:
+            item.update(dt, player_rect=self.player.rect)
+
+        if self.active_item is not None and not self.active_item.in_range:
+            self.active_message = None
+            self.active_item = None
 
         tile = self.level.tile_size
         player_tile = (int(self.player.rect.centerx // tile), int((self.player.rect.bottom - 1) // tile))
@@ -117,17 +227,9 @@ class PlayState(GameState):
         self._active_grass_tiles = still_active
 
         self.wind.update(dt, camera_rect)
-        # After wind.update() so this frame's just-refreshed smoothed gust
-        # speed is what speeds the sway up, not last frame's.
+
         self.sway_phase += sway_phase_delta(dt, self.wind.smoothed_screen_speed)
 
-        # A pond nowhere near the camera can't have the player in it
-        # (camera.follow keeps the player roughly centered) and nobody's
-        # looking at its ripple anyway - skip its physics entirely rather
-        # than stepping every surface point of every pond in the level
-        # every frame regardless of visibility. It just resumes exactly
-        # where it left off once back on screen (dt isn't owed anywhere,
-        # a skipped frame simply isn't simulated).
         for body in self.water_bodies:
             if body.bounds.colliderect(camera_rect):
                 body.check_splash(self.player)
@@ -145,13 +247,15 @@ class PlayState(GameState):
             surface.blit(img, (offset_x - img.get_width(), 0))
             surface.blit(img, (offset_x, 0))
         camera_rect = self._camera_rect()
-        self.level.draw(surface, camera_rect, exclude_layers={GRASS_LAYER})
+        self.level.draw(surface, camera_rect)
         for tree in self.trees:
             tree.draw(surface, self.camera)
 
         gust_speed = self.wind.smoothed_screen_speed
         tile = self.level.tile_size
 
+        for item in self.items:
+            item.draw(surface, self.camera)
         self.player.draw(surface, self.camera)
         for (tx, ty), blades in self.grass_by_tile.items():
             tile_rect = pygame.Rect(tx * tile - tile, ty * tile - tile, tile * 3, tile * 3)
@@ -162,3 +266,49 @@ class PlayState(GameState):
         for body in self.water_bodies:
             if body.bounds.colliderect(camera_rect):
                 body.draw(surface, self.camera)
+
+        amount = DESATURATION_BY_LEVEL[min(self.level_index, len(DESATURATION_BY_LEVEL) - 1)]
+        if amount > 0:
+            surface.blit(desaturate_surface(surface, amount), (0, 0))
+
+        if self.active_message:
+            self._draw_message(surface)
+        if self.state == "found" and self.found_timer >= self.MIN_FOUND_DISPLAY_TIME:
+            self._draw_found_prompt(surface)
+
+    @staticmethod
+    def _wrap_text(font, text, max_width):
+        words = text.split(" ")
+        lines = []
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}" if current else word
+            if not current or font.size(candidate)[0] <= max_width:
+                current = candidate
+            else:
+                lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines
+
+    def _draw_wrapped_text(self, surface, text, bottom_y, color=(255, 255, 255), alpha=None):
+        font = PixelFont(scale=ITEM_TEXT_SCALE)
+        max_width = surface.get_width() - ITEM_TEXT_MARGIN * 2
+        lines = self._wrap_text(font, text, max_width)
+        line_height = font.get_height() + ITEM_TEXT_LINE_GAP
+        top = bottom_y - line_height * len(lines)
+        for i, line in enumerate(lines):
+            line_surf = font.render(line, False, color)
+            if alpha is not None:
+                line_surf.set_alpha(alpha)
+            rect = line_surf.get_rect(midtop=(surface.get_width() // 2, top + i * line_height))
+            surface.blit(line_surf, rect)
+
+    def _draw_message(self, surface):
+        self._draw_wrapped_text(surface, self.active_message, surface.get_height() - MESSAGE_OFFSET_Y)
+
+    def _draw_found_prompt(self, surface):
+        alpha = int(140 + 100 * math.sin(self.found_timer * 3))
+        self._draw_wrapped_text(surface, "You found the fix! Press any key to move on...", surface.get_height() / 4,
+                                alpha=alpha)

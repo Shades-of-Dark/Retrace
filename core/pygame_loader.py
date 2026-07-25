@@ -11,30 +11,6 @@
     if entry.ramp:
         ...  # 1 = ramp up-right, 2 = ramp up-left (matches tile.py's convention)
 
-screen_w/screen_h above are YOUR game's own resolution, not the editor's -
-get_visible_tiles() only does rect-overlap math against whatever camera_rect
-you pass it, so it works the same at any screen size; chunk lookups are
-bounded by camera_rect's extent, not by the editor's own window.
-
-Layers hidden in the editor's layers panel are skipped by default (pass
-include_hidden=True to see everything anyway, e.g. for a debug layer).
-
-Which layers are solid is data, not something the game hardcodes: the
-editor's per-layer "solid" toggle round-trips as top-level "layer_collision"
-in the JSON, exposed here as `tilemap.solid_layers` (a set of layer ids) and
-`tilemap.is_layer_solid(layer_id)`.
-
-Entity markers (e.g. a player_spawn placed in the editor) show up in
-`tilemap.entities` / `tilemap.get_entities(kind=...)`, with `pos` already
-converted to world pixels.
-
-Coordinate model: an entry's grid position (`pos`) is in the level's
-canonical tile_size (top-level "tile_size" in the JSON) - that's what decides
-WHERE it sits. Its rendered size comes from its own tileset's tile_size *
-scale - that's what decides how BIG it draws. If a tileset's scale doesn't
-match the canonical tile_size, tiles from it will overhang/underhang their
-grid cell, which is intentional (e.g. a tall prop drawn bigger than its
-single-cell footprint) rather than a bug.
 """
 import os
 import json
@@ -80,6 +56,7 @@ class _TilesetSource:
         config_path = os.path.join(tilesets_dir, f"{name}.json")
         self.tile_size = 16
         self.scale = 1.0
+        cfg = {}
         if os.path.isfile(config_path):
             with open(config_path) as f:
                 cfg = json.load(f)
@@ -156,15 +133,11 @@ class TileMap:
         self.layer_collision = layer_collision or {}  # layer id -> bool, set by the editor's
                                                         # per-layer "solid" toggle
         self.entities = entities or []  # [{"kind", "pos" (world px), "layer"}]
-        # Tileset names pulled out of the generic draw/solids pipeline by
-        # remove_from_draw()/remove_from_solids() - e.g. water, which
-        # game/water.py renders and collides with on its own terms. Each is
-        # independent: a tileset can be undrawn but still solid, or vice
-        # versa. Raw entries are untouched in self.chunks either way, so
-        # code that reads chunks directly (water's flood fill) still sees
-        # them regardless of these sets.
+
         self.hidden_tilesets = set()
         self.nonsolid_tilesets = set()
+
+        self.hidden_props = set()
 
     def remove_from_draw(self, tileset_name):
         """Tiles from this tileset stop appearing in draw() (via
@@ -174,9 +147,20 @@ class TileMap:
     def restore_to_draw(self, tileset_name):
         self.hidden_tilesets.discard(tileset_name)
 
+    def remove_from_draw_by_prop(self, key, value=None):
+
+        self.hidden_props.add((key, value))
+
+    def restore_to_draw_by_prop(self, key, value=None):
+        self.hidden_props.discard((key, value))
+
+    def is_prop_hidden(self, props):
+
+        return any(key in props and (value is None or props[key] == value)
+                   for key, value in self.hidden_props)
+
     def remove_from_solids(self, tileset_name):
-        """Tiles from this tileset stop appearing in get_solid_rects(),
-        no matter their layer."""
+
         self.nonsolid_tilesets.add(tileset_name)
 
     def restore_to_solids(self, tileset_name):
@@ -221,10 +205,7 @@ class TileMap:
         entities = []
         for entry in raw_entries:
             pos = entry["pos"]
-            # int(): off-grid (foliage-style) entries have fractional
-            # positions - floor-dividing a float yields a float chunk index,
-            # which would break dict-key consistency with the int chunk
-            # coords _chunk_coord() produces from integer camera-space math.
+
             key = (int(pos[0] // chunk_size), int(pos[1] // chunk_size))
             chunks.setdefault(key, []).append(entry)
             if entry.get("type") == "entity":
@@ -248,14 +229,11 @@ class TileMap:
 
     @property
     def solid_layers(self):
-        """Layer ids flagged as collidable in the level file itself (the
-        editor's per-layer "solid" toggle) - read from the data instead of
-        needing the game to hardcode which layer ids are solid."""
+
         return {layer_id for layer_id, solid in self.layer_collision.items() if solid}
 
     def get_entities(self, kind=None):
-        """Entity markers placed in the editor (e.g. player_spawn). pos is
-        already in world pixels, unlike the raw entry's tile-grid pos."""
+
         if kind is None:
             return list(self.entities)
         return [e for e in self.entities if e["kind"] == kind]
@@ -308,13 +286,7 @@ class TileMap:
                     yield entry
 
     def get_visible_tiles(self, camera_rect, layer=None, margin_tiles=2, include_hidden=False):
-        """Tiles/assets whose rect overlaps camera_rect (an arbitrary
-        world-pixel-space pygame.Rect - pass your own game's actual camera
-        view, any width/height; this makes no assumption about screen size).
-        margin_tiles pads the chunk lookup so assets whose origin sits just
-        outside the camera but bleed into it are still included. Layers
-        hidden in the editor are skipped by default (include_hidden=True to
-        see everything regardless, e.g. for a debug/annotation layer)."""
+
         t0x = camera_rect.left // self.tile_size - margin_tiles
         t0y = camera_rect.top // self.tile_size - margin_tiles
         t1x = camera_rect.right // self.tile_size + margin_tiles

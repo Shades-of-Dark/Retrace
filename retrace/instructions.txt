@@ -1,0 +1,8 @@
+Retrace
+-------
+Controls: Arrow keys / WASD to move, E to interact, Esc to pause.
+
+If Windows shows a security warning, click "More info" then "Run anyway" —
+this is expected for an unsigned indie build.
+
+Thanks for playing!

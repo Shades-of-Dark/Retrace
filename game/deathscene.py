@@ -1,5 +1,6 @@
 import pygame
 import math
+from core.core_funcs import resource_path
 from core.state_manager import GameState
 from core.tilemap_loader import Level
 from core.camera import Camera
@@ -7,8 +8,8 @@ from core.ui.pixel_font import PixelFont
 
 
 class DeathScene(GameState):
-    DEFAULT_LEVEL_PATH = "game/assets/levels/death_1.json"
-    DEFAULT_TILESETS_DIR = "game/assets/images/tilesets"
+    DEFAULT_LEVEL_PATH = resource_path("game/assets/levels/death_1.json")
+    DEFAULT_TILESETS_DIR = resource_path("game/assets/images/tilesets")
     ADVANCE_KEYS = (pygame.K_SPACE, pygame.K_RETURN, pygame.K_e)
     MIN_DISPLAY_TIME = 1.0
 

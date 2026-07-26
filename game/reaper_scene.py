@@ -4,11 +4,12 @@ import random
 import pygame
 
 from core.animation import slice_spritesheet
+from core.core_funcs import resource_path
 from core.particles import ParticleSystem
 from core.state_manager import GameState
 from core.ui.pixel_font import PixelFont
 
-REAPER_SHEET_PATH = "game/assets/images/reaper/reaper.png"
+REAPER_SHEET_PATH = resource_path("game/assets/images/reaper/reaper.png")
 REAPER_FRAME_SIZE = (128, 128)
 REAPER_TOP_MARGIN = 5
 

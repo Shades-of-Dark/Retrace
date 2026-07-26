@@ -1,6 +1,15 @@
+import os
+import sys
+
 import pygame
 import pygame.surfarray as surfarray
 import numpy as np
+
+
+def resource_path(relative_path):
+    """Get path to a resource, works for dev and for PyInstaller onefile exe."""
+    base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
 
 
 def palette_swap(surf, old_c, new_c):

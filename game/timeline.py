@@ -4,6 +4,7 @@ import random
 import pygame
 from pygame import gfxdraw
 
+from core.core_funcs import resource_path
 from core.particles import ParticleSystem
 from core.state_manager import GameState
 from core.states import PauseState
@@ -102,7 +103,7 @@ class Timeline(GameState):
             self._advance()
             return
 
-        tilesets_dir = event_data.get("tilesets_dir", "game/assets/images/tilesets")
+        tilesets_dir = event_data.get("tilesets_dir", resource_path("game/assets/images/tilesets"))
         self.visited_events.add(level_path)
 
         music_path = get_level(self.level_index)["music_path"]

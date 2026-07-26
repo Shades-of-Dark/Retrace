@@ -3,10 +3,10 @@ import math
 import pygame
 
 from core.animation import Animation, Animator, slice_spritesheet
-from core.core_funcs import palette_swap
+from core.core_funcs import palette_swap, resource_path
 from core.entity import Entity
 
-PLAYER_SPRITES_DIR = "game/assets/images/player"
+PLAYER_SPRITES_DIR = resource_path("game/assets/images/player")
 DEFAULT_HAIR_COLOR = (75, 61, 68)
 
 

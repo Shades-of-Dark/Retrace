@@ -2,6 +2,7 @@ import sys
 
 import pygame
 from core.audio_manager import AudioManager
+from core.core_funcs import resource_path
 from core.display import VirtualDisplay
 from core.input_manager import InputManager
 from core.state_manager import StateManager
@@ -29,20 +30,20 @@ def main():
         (VIRTUAL_WIDTH, VIRTUAL_HEIGHT),
         window_size=(WINDOW_WIDTH, WINDOW_HEIGHT),
         title="Retrace",
-        icon="game/assets/images/ui/skull.png"
+        icon=resource_path("game/assets/images/ui/skull.png")
     )
     clock = pygame.time.Clock()
 
     input_manager = InputManager(BINDINGS)
     audio_manager = AudioManager()
     audio_manager.load_sounds({
-        "jump": "game/assets/sfx/jump.wav",
-        "interact": "game/assets/sfx/interact.wav",
-        "correct_clue": "game/assets/sfx/correctclue.wav",
-        "wrong_clue": "game/assets/sfx/wrongclue.wav",
-        "deathscene": "game/assets/sfx/deathscene.wav",
-        "reaching_reaper": "game/assets/sfx/reachingreaper.wav",
-        "select": "assets/sfx/select.wav",
+        "jump": resource_path("game/assets/sfx/jump.wav"),
+        "interact": resource_path("game/assets/sfx/interact.wav"),
+        "correct_clue": resource_path("game/assets/sfx/correctclue.wav"),
+        "wrong_clue": resource_path("game/assets/sfx/wrongclue.wav"),
+        "deathscene": resource_path("game/assets/sfx/deathscene.wav"),
+        "reaching_reaper": resource_path("game/assets/sfx/reachingreaper.wav"),
+        "select": resource_path("assets/sfx/select.wav"),
     })
 
     states = StateManager()

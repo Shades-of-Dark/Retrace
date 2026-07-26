@@ -2,9 +2,10 @@ import os
 
 import pygame
 
+from ..core_funcs import resource_path
 from ..pixelfont import Font as _FontAtlas
 
-DEFAULT_FONT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ui_assets", "font.png")
+DEFAULT_FONT_PATH = resource_path(os.path.join("core", "ui_assets", "font.png"))
 
 # Atlases are re-parsed from the PNG on first use per path, then shared
 # across every PixelFont instance at any scale/color/outline combination.

@@ -1,26 +1,27 @@
 
+from core.core_funcs import resource_path
 from core.states import MenuState
 from game.deathscene import DeathScene
 from game.timeline_dat import get_timeline_stuff
 
-MENU_MUSIC = "assets/music/menushort.wav"
+MENU_MUSIC = resource_path("assets/music/menushort.wav")
 MUSIC_FADE_MS = 500
 
 LEVELS = [
     {
-        "death_path": "game/assets/levels/death_1.json",
-        "tilesets_dir": "game/assets/images/tilesets",
-        "music_path": "assets/music/level1short.wav",
+        "death_path": resource_path("game/assets/levels/death_1.json"),
+        "tilesets_dir": resource_path("game/assets/images/tilesets"),
+        "music_path": resource_path("assets/music/level1short.wav"),
     },
     {
-        "death_path": "game/assets/levels/death_2.json",
-        "tilesets_dir": "game/assets/images/tilesets",
-        "music_path": "assets/music/level2short.wav",
+        "death_path": resource_path("game/assets/levels/death_2.json"),
+        "tilesets_dir": resource_path("game/assets/images/tilesets"),
+        "music_path": resource_path("assets/music/level2short.wav"),
     },
     {
-        "death_path": "game/assets/levels/death_3.json",
-        "tilesets_dir": "game/assets/images/tilesets",
-        "music_path": "assets/music/level3short.wav",
+        "death_path": resource_path("game/assets/levels/death_3.json"),
+        "tilesets_dir": resource_path("game/assets/images/tilesets"),
+        "music_path": resource_path("assets/music/level3short.wav"),
     }
 
 ]

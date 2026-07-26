@@ -2,7 +2,7 @@ import math
 
 import pygame
 
-from core.core_funcs import additive_glow, desaturate_surface, get_image, palette_swap
+from core.core_funcs import additive_glow, desaturate_surface, get_image, palette_swap, resource_path
 from core.particles import ParticleSystem
 from game.grass import Grass, load_grass_frames, sway_phase_delta
 from game.item import Item
@@ -64,8 +64,8 @@ class PlayState(GameState):
     MIN_FOUND_DISPLAY_TIME = 1.0
 
     def __init__(self, manager, input_manager, audio_manager, size, on_quit_to_menu,
-                 level_path="game/assets/levels/level_1.json",
-                 tilesets_dir="game/assets/images/tilesets",
+                 level_path=resource_path("game/assets/levels/level_1.json"),
+                 tilesets_dir=resource_path("game/assets/images/tilesets"),
                  quit_label="Quit to menu",
                  level_index=0):
         super().__init__(manager)
@@ -101,7 +101,7 @@ class PlayState(GameState):
 
         self.camera = Camera(size[0], size[1], smoothing=0.2, intro_smoothing=0.04)
         self.camera.follow(self.player)
-        leaf_sheet = pygame.image.load("game/assets/images/particles/leaves.png").convert()
+        leaf_sheet = pygame.image.load(resource_path("game/assets/images/particles/leaves.png")).convert()
         leaves_img = []
         for i in range(3):
             img = get_image(leaf_sheet, i, 8, 8, color=(0, 0, 0))
@@ -111,12 +111,12 @@ class PlayState(GameState):
             leaves_img.append(midtone)
             leaves_img.append(darkest)
         self.trees = []
-        tree_img = pygame.image.load("game/assets/images/tilesets/tree.png").convert()
+        tree_img = pygame.image.load(resource_path("game/assets/images/tilesets/tree.png")).convert()
         tree_img.set_colorkey((0, 0, 0))
-        tree_mask = pygame.image.load("game/assets/images/masks/tree_mask.png").convert()
+        tree_mask = pygame.image.load(resource_path("game/assets/images/masks/tree_mask.png")).convert()
         tree_mask.set_colorkey((255, 255, 255))
-        grass_frames = load_grass_frames("game/assets/images/tilesets")
-        targets = pygame.image.load("game/assets/images/tilesets/tree_target.png").convert()
+        grass_frames = load_grass_frames(resource_path("game/assets/images/tilesets"))
+        targets = pygame.image.load(resource_path("game/assets/images/tilesets/tree_target.png")).convert()
         for bucket in self.level.tilemap.chunks.values():
             for raw in bucket:
                 if raw.get("tileset") != "tree":
@@ -143,9 +143,9 @@ class PlayState(GameState):
         self.wind = WindField(tile_size=self.level.tile_size)
         self.level.tilemap.remove_from_draw("tree")
         self.level.tilemap.remove_from_draw(GRASS_TILESET)
-        self.bg_far = pygame.image.load("game/assets/images/backgrounds/parallax_far.png").convert_alpha()
-        self.bg_mid = pygame.image.load("game/assets/images/backgrounds/parallax_mid.png").convert_alpha()
-        self.bg_near = pygame.image.load("game/assets/images/backgrounds/parallax_near.png").convert_alpha()
+        self.bg_far = pygame.image.load(resource_path("game/assets/images/backgrounds/parallax_far.png")).convert_alpha()
+        self.bg_mid = pygame.image.load(resource_path("game/assets/images/backgrounds/parallax_mid.png")).convert_alpha()
+        self.bg_near = pygame.image.load(resource_path("game/assets/images/backgrounds/parallax_near.png")).convert_alpha()
         self.items = []
 
         self._spawn_role_item("bike", "The front wheel is loose.", is_correct=True)

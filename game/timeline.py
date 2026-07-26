@@ -1,8 +1,10 @@
 import math
+import random
 
 import pygame
 from pygame import gfxdraw
 
+from core.particles import ParticleSystem
 from core.state_manager import GameState
 from core.states import PauseState
 from core.tilemap_loader import Level
@@ -10,6 +12,18 @@ from core.camera import Camera
 from core.ui.pixel_font import PixelFont
 from game.levels import MUSIC_FADE_MS, get_level
 from game.play import PlayState
+
+TIMELINE_DUST_PRESET = {
+    "count": 1,
+    "speed": (2, 5),
+    "angle": (0, 360),
+    "gravity": 0,
+    "color": (200, 200, 220, 90),
+    "size": (1, 2),
+    "lifetime": (6, 10),
+}
+TIMELINE_PARTICLE_INTERVAL = 1.4
+TIMELINE_PARTICLE_PRESPAWN = 5
 
 
 class Timeline(GameState):
@@ -37,6 +51,20 @@ class Timeline(GameState):
         self.title_font = PixelFont(scale=3)
         self.event_font = PixelFont(scale=1)
 
+        self.particles = ParticleSystem()
+        self.particles.register_preset("timeline_dust", TIMELINE_DUST_PRESET)
+        self._particle_timer = 0.0
+        self._particles_seeded = False
+
+    def _prespawn_particles(self):
+        w, h = self.size
+        for _ in range(TIMELINE_PARTICLE_PRESPAWN):
+            pos = (random.uniform(0, w), random.uniform(0, h))
+            before = len(self.particles.particles)
+            self.particles.emit("timeline_dust", pos)
+            for p in self.particles.particles[before:]:
+                p.age = random.uniform(0, p.lifetime)
+
     def enter(self, size=(960, 540), next_state=None, level_path=None, tilesets_dir=None, **kwargs):
 
         self.size = size
@@ -45,6 +73,10 @@ class Timeline(GameState):
 
         self.camera = Camera(size[0], size[1], smoothing=0.1)
         self.time_in_scene = 0.0
+
+        if not self._particles_seeded:
+            self._prespawn_particles()
+            self._particles_seeded = True
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -103,6 +135,14 @@ class Timeline(GameState):
 
     def update(self, dt):
         self.time_in_scene += dt
+
+        self._particle_timer += dt
+        if self._particle_timer >= TIMELINE_PARTICLE_INTERVAL:
+            self._particle_timer -= TIMELINE_PARTICLE_INTERVAL
+            w, h = self.size
+            self.particles.emit("timeline_dust", (random.uniform(0, w), random.uniform(0, h)))
+        self.particles.update(dt)
+
         mouse_pos = self.input_manager.mouse_pos if self.input_manager is not None else self.mouse_pos
         events = self.timeline_data["events"]
         for i, circle in enumerate(self.circle_rects):
@@ -170,3 +210,5 @@ class Timeline(GameState):
                 name_surf = self.event_font.render(name, False, (220, 220, 230))
                 surface.blit(name_surf, name_surf.get_rect(midbottom=(center[0], center[1] - 18)))
             o += 1
+
+        self.particles.draw(surface)

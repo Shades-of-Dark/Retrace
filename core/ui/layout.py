@@ -1,7 +1,7 @@
 # core/states screens (menu/options/pause) size their widgets with pixel
 # constants tuned by eye against this resolution. ui_scale() turns those
 # constants into a factor that keeps the same layout proportions on any
-# smaller virtual canvas (e.g. main.py's "quarter the window" pixel-art
+# smaller virtual canvas (e.g. retrace.py's "quarter the window" pixel-art
 # setup) instead of overflowing it.
 REFERENCE_SIZE = (960, 540)
 

@@ -70,7 +70,7 @@ class OptionsState(GameState):
         return handler
 
     def _back(self):
-        self.manager.pop()
+        self.manager.pop(size=self.size)
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:

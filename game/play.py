@@ -30,7 +30,7 @@ ITEM_TEXT_LINE_GAP = 2
 ITEM_TEXT_MARGIN = 12
 DESATURATION_BY_LEVEL = [0.0, 0.3, 0.55]
 HAIR_COLOR_BY_LEVEL = [
-    (75, 61, 68),     # Run 1 - original
+    (75, 61, 68),  # Run 1 - original
     (75, 61, 68),  # same hair
     (210, 208, 200),  # Run 3 - white/gray
 ]
@@ -52,8 +52,8 @@ FOUND_PULSE_HALO_COLOR = (20, 15, 10)
 CORRECT_PICKUP_PRESET = {
     "count": (12, 18),
     "speed": (30, 70),
-    "angle": (0, 360),   # full radial burst
-    "gravity": 60,       # light downward arc rather than floating flat
+    "angle": (0, 360),
+    "gravity": 60,
     "color": (255, 215, 130, 220),
     "size": (1, 3),
     "lifetime": (0.4, 0.8),
@@ -217,9 +217,7 @@ class PlayState(GameState):
         self.found_message_shown = False
         self.audio.play("correct_clue")
         self.particles.emit("correct_pickup", item.rect.center)
-        # state="found" already halts update() below each frame - that
-        # freeze itself is the "click" of recognition; the message just
-        # waits a beat (FOUND_FREEZE_DURATION) before appearing on top of it.
+
         self.state = "found"
 
     def on_wrong_clue_found(self, item):
@@ -241,15 +239,10 @@ class PlayState(GameState):
         return prev_age, new_age, label
 
     def _advance_to_next_run(self):
-        # Stopped (not paused) here: whatever comes next - the age
-        # transition, then a new age's death vignette, or the reaper - is
-        # a different track/moment, not something to resume back into.
+
         self.audio.stop_music()
 
         if self.level_index + 1 >= len(TIMELINE_CONTS):
-            # No next run - this correct clue was the last one, ever. No
-            # "years later" transition either: there's no more life left to
-            # advance into, so cut straight to the reaper.
             self._advance_to_reaper_scene()
             return
 
@@ -428,13 +421,6 @@ class PlayState(GameState):
         item = self.found_item
         rect = self.camera.apply(item.rect)
 
-        # additive_glow adds light rather than blending toward a color, so
-        # it reads as lighting up instead of fading - the inverse of the
-        # wrong-item desaturation, not just a lighter version of it. Runs
-        # on get_alpha_image() (true per-pixel alpha), not the raw
-        # colorkey-transparent item.image - BLEND_RGB_ADD leaves alpha
-        # untouched, so a colorkeyed background would drift off its key
-        # color and stop being recognized as transparent.
         ramp_t = min(1.0, self.found_timer / FOUND_GLOW_RAMP)
         glowed = additive_glow(item.get_alpha_image(), FOUND_GLOW_COLOR, FOUND_GLOW_MAX_AMOUNT * ramp_t)
         surface.blit(glowed, rect)
@@ -445,9 +431,7 @@ class PlayState(GameState):
         if alpha > 0:
             glow_surf = pygame.Surface((radius * 2 + 4, radius * 2 + 4), pygame.SRCALPHA)
             center = (radius + 2, radius + 2)
-            # dark halo drawn first (plain alpha blit) so the ring still
-            # reads against light/desaturated backgrounds, not just dark
-            # ones - the additive ring alone can wash out there
+
             pygame.draw.circle(glow_surf, (*FOUND_PULSE_HALO_COLOR, round(alpha * 0.5)), center, radius, width=4)
             surface.blit(glow_surf, glow_surf.get_rect(center=rect.center))
             glow_surf.fill((0, 0, 0, 0))

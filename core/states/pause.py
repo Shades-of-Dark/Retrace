@@ -70,7 +70,7 @@ class PauseState(GameState):
         return handler
 
     def _resume(self):
-        self.manager.pop()
+        self.manager.pop(size=self.size)
 
     def _open_options(self):
         self.manager.push(OptionsState(self.manager, self.audio, theme=self.theme, size=self.size))

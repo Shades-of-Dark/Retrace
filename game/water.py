@@ -233,7 +233,7 @@ class Water:
         # doesn't scale with dt at all - it's a fixed-step technique (its
         # stability and exact traveling/reflecting behavior both depend on
         # advancing exactly 1 point per call), so it assumes update() is
-        # called at a roughly steady rate - true here since main.py caps to
+        # called at a roughly steady rate - true here since retrace.py caps to
         # clock.tick(60). A large one-off dt spike would just look like a
         # skipped simulation tick, not break anything.
         new_offset = [0.0] * n

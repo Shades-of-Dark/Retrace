@@ -10,10 +10,8 @@ from .options import OptionsState
 MENU_DUST_PRESET = {
     "count": 1,
     "speed": (8, 20),
-    "angle": (-95, -85),   # roughly upward: pygame's rotate() is y-down,
-                            # so -90 (not 90) is "up" here
-    "gravity": -2,          # slight negative gravity keeps them drifting
-                            # up instead of arcing back down
+    "angle": (-95, -85),
+    "gravity": -2,
     "color": (200, 200, 220, 90),
     "size": (1, 2),
     "lifetime": (4, 7),
@@ -35,7 +33,7 @@ class MenuState(GameState):
     """Title screen: Start / Options / Quit. Generic - the game layer
     supplies on_start (typically manager.switch(build_play_state()));
     Options and its audio wiring are handled entirely within core.
-    on_quit defaults to posting a QUIT event, which main.py's event loop
+    on_quit defaults to posting a QUIT event, which retrace.py's event loop
     already handles."""
 
     def __init__(self, manager, audio_manager, title="Game Title",
@@ -58,9 +56,6 @@ class MenuState(GameState):
         self._prespawn_dust(*(self.size or _surface_size()))
 
     def _prespawn_dust(self, width, height):
-        # Spawn a batch already mid-flight at random y-positions instead of
-        # everything starting at the bottom edge and taking several
-        # seconds to drift up and fill the screen.
         for _ in range(MENU_DUST_PRESPAWN_COUNT):
             pos = (random.uniform(0, width), random.uniform(0, height))
             before = len(self.particles.particles)

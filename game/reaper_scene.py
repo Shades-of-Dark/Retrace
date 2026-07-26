@@ -1,8 +1,10 @@
 import math
+import random
 
 import pygame
 
 from core.animation import slice_spritesheet
+from core.particles import ParticleSystem
 from core.state_manager import GameState
 from core.ui.pixel_font import PixelFont
 
@@ -41,6 +43,28 @@ ENDING_CREDITS_COLOR = (200, 195, 185)  # was too dark to read as "fully
                                         # arrived" even at alpha=255
 ENDING_HOLD_DURATION = 5.5
 
+REAPER_DUST_PRESET = {
+    "count": 1,
+    "speed": (2, 5),
+    "angle": (0, 360),
+    "gravity": 0,
+    "color": (190, 185, 180, 45),
+    "size": (1, 1),
+    "lifetime": (6, 10),
+}
+REAPER_RED_PRESET = {
+    "count": 1,
+    "speed": (2, 5),
+    "angle": (-100, -80),
+    "gravity": -1,
+    "color": (140, 25, 20, 55),
+    "size": (1, 1),
+    "lifetime": (6, 10),
+}
+REAPER_PARTICLE_INTERVAL = 1.2
+REAPER_PARTICLE_PRESPAWN = 6
+ENDING_PARTICLE_INTERVAL = 0.6
+ENDING_PARTICLE_BURST = 6
 
 
 REAPER_LINES = [
@@ -85,6 +109,22 @@ class ReaperScene(GameState):
         self.font = PixelFont(scale=TEXT_SCALE)
         self.title_font = PixelFont(scale=3)
 
+        self.particles = ParticleSystem()
+        self.particles.register_preset("reaper_dust", REAPER_DUST_PRESET)
+        self.particles.register_preset("reaper_red", REAPER_RED_PRESET)
+        self._particle_timer = 0.0
+        self._prespawn_particles()
+
+    def _prespawn_particles(self, count=REAPER_PARTICLE_PRESPAWN):
+        w, h = self.size
+        for _ in range(count):
+            preset = random.choice(("reaper_dust", "reaper_red"))
+            pos = (random.uniform(0, w), random.uniform(0, h))
+            before = len(self.particles.particles)
+            self.particles.emit(preset, pos)
+            for p in self.particles.particles[before:]:
+                p.age = random.uniform(0, p.lifetime)
+
     def enter(self, lines=None, **kwargs):
         self.lines = lines if lines is not None else REAPER_LINES
         self.line_index = 0
@@ -101,6 +141,15 @@ class ReaperScene(GameState):
         return (surface.get_width() - w) // 2, REAPER_TOP_MARGIN + bob
 
     def update(self, dt):
+        interval = ENDING_PARTICLE_INTERVAL if self.phase == "ending" else REAPER_PARTICLE_INTERVAL
+        self._particle_timer += dt
+        if self._particle_timer >= interval:
+            self._particle_timer -= interval
+            w, h = self.size
+            preset = random.choice(("reaper_dust", "reaper_red"))
+            self.particles.emit(preset, (random.uniform(0, w), random.uniform(0, h)))
+        self.particles.update(dt)
+
         self.bob_time += dt
         self.frame_timer += dt
         if self.frame_timer >= IDLE_FRAME_DURATION:
@@ -133,6 +182,7 @@ class ReaperScene(GameState):
             if self.line_index >= len(self.lines):
                 self.phase = "ending"
                 self.ending_timer = 0.0
+                self._prespawn_particles(ENDING_PARTICLE_BURST)
 
     def draw(self, surface):
         if self.phase == "intro":
@@ -157,6 +207,7 @@ class ReaperScene(GameState):
 
     def _draw_dialogue(self, surface):
         surface.fill(BG_COLOR)
+        self.particles.draw(surface)
         surface.blit(self.idle_frames[self.frame_index], self._reaper_pos(surface))
         if self.line_index < len(self.lines):
             self._draw_wrapped_text(surface, self.lines[self.line_index],
@@ -173,6 +224,7 @@ class ReaperScene(GameState):
             return
 
         surface.fill((0, 0, 0))
+        self.particles.draw(surface)
         card_t = self.ending_timer - ENDING_FADE_DURATION
 
         line_alpha = round(255 * min(1.0, card_t / ENDING_LINE_FADE))

@@ -3,27 +3,34 @@ import math
 import pygame
 
 from core.animation import Animation, Animator, slice_spritesheet
+from core.core_funcs import palette_swap
 from core.entity import Entity
 
 PLAYER_SPRITES_DIR = "game/assets/images/player"
+DEFAULT_HAIR_COLOR = (75, 61, 68)
 
 
-def _load_frames(filename, frame_size=(16, 16)):
+def _load_frames(filename, frame_size=(16, 16), hair_color=None):
     sheet = pygame.image.load(f"{PLAYER_SPRITES_DIR}/{filename}").convert_alpha()
-    return slice_spritesheet(sheet, *frame_size)
+    frames = slice_spritesheet(sheet, *frame_size)
+    if hair_color is not None and hair_color != DEFAULT_HAIR_COLOR:
+        frames = [palette_swap(frame, DEFAULT_HAIR_COLOR, hair_color) for frame in frames]
+    return frames
 
 
-def _load_animation(filename, frame_size=(16, 16), frame_duration=0.1, loop=True):
-    return Animation(_load_frames(filename, frame_size), frame_duration=frame_duration, loop=loop)
+def _load_animation(filename, frame_size=(16, 16), frame_duration=0.1, loop=True, hair_color=None):
+    return Animation(_load_frames(filename, frame_size, hair_color=hair_color),
+                      frame_duration=frame_duration, loop=loop)
 
 
 class Player(Entity):
 
-    def __init__(self, pos, size, color=(255, 255, 255), *,
+    def __init__(self, pos, size, color=(255, 255, 255), *, hair_color=None, audio_manager=None,
                  acceleration=1800, max_speed=120, deceleration=1800,
                  jump_height=64, time_to_apex=0.45, fall_gravity_scale=1.6,
                  max_fall_speed=500, coyote_time=0.4):
         super().__init__(pos, size, color=color)
+        self.audio = audio_manager
         self.acceleration = acceleration
         self.max_speed = max_speed
         self.deceleration = deceleration
@@ -36,13 +43,14 @@ class Player(Entity):
         self.facing = 1  # 1 = right, -1 = left
         self._was_grounded = True
 
-
-        fall_frame, land_frame = _load_frames("player_land.png")
+        hair_color = hair_color or DEFAULT_HAIR_COLOR
+        fall_frame, land_frame = _load_frames("player_land.png", hair_color=hair_color)
 
         self.animator = Animator()
-        self.animator.add("idle", _load_animation("player_idle.png", frame_duration=0.55))
-        self.animator.add("run", _load_animation("player_run.png", frame_duration=0.07, frame_size=(16,17)))
-        self.animator.add("jump", _load_animation("player_jump.png"))
+        self.animator.add("idle", _load_animation("player_idle.png", frame_duration=0.55, hair_color=hair_color))
+        self.animator.add("run", _load_animation(
+            "player_run.png", frame_duration=0.07, frame_size=(16, 17), hair_color=hair_color))
+        self.animator.add("jump", _load_animation("player_jump.png", hair_color=hair_color))
         self.animator.add("fall", Animation([fall_frame], loop=True))
         self.animator.add("land", Animation([land_frame], frame_duration=0.15, loop=False))
         self.animator.play("idle")
@@ -63,6 +71,8 @@ class Player(Entity):
     def jump(self):
         self.velocity.y = self.jump_velocity
         self._coyote_timer = 0.0
+        if self.audio:
+            self.audio.play("jump")
 
     def _move(self, dt, move_x):
         if move_x != 0:

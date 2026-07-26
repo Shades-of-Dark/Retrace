@@ -18,6 +18,7 @@ class AudioManager:
         self.sfx_volume = 1.0
         self.music_volume = 1.0
         self.muted = False
+        self._current_music_path = None
 
     def load_sounds(self, sound_map):
         """sound_map: {"jump": "assets/sfx/jump.wav", ...}"""
@@ -36,10 +37,23 @@ class AudioManager:
     def play_music(self, path, loops=-1, fade_ms=0, volume=None):
         if not self.available:
             return
+        if self._current_music_path == path:
+            # Same track already loaded (playing or paused) - just make
+            # sure it's audible rather than reloading and restarting it
+            # from 0. Lets quick memory<->timeline<->memory hops resume
+            # in place instead of feeling like a hard restart each time.
+            pygame.mixer.music.unpause()
+            return
         pygame.mixer.music.load(path)
         target_volume = volume if volume is not None else self.music_volume
         pygame.mixer.music.set_volume(0 if self.muted else target_volume)
         pygame.mixer.music.play(loops, fade_ms=fade_ms)
+        self._current_music_path = path
+
+    def pause_music(self):
+        if not self.available:
+            return
+        pygame.mixer.music.pause()
 
     def stop_music(self, fade_ms=0):
         if not self.available:
@@ -48,6 +62,7 @@ class AudioManager:
             pygame.mixer.music.fadeout(fade_ms)
         else:
             pygame.mixer.music.stop()
+        self._current_music_path = None
 
     def set_sfx_volume(self, volume):
         self.sfx_volume = max(0.0, min(1.0, volume))

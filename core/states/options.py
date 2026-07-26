@@ -60,7 +60,14 @@ class OptionsState(GameState):
 
         back_width, back_height = round(100 * scale), round(36 * scale)
         panel.add(Button((panel.rect.right - pad - back_width, panel.rect.bottom - pad - back_height, back_width, back_height),
-                          "Back", on_click=self._back, theme=self.theme, font=font))
+                          "Back", on_click=self._click(self._back), theme=self.theme, font=font))
+
+    def _click(self, callback):
+        def handler():
+            self.audio.play("select")
+            if callback:
+                callback()
+        return handler
 
     def _back(self):
         self.manager.pop()

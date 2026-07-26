@@ -7,12 +7,11 @@ from core.input_manager import InputManager
 from core.state_manager import StateManager
 from game.levels import build_menu_state
 
-
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 540
-VIRTUAL_WIDTH = WINDOW_WIDTH / 3 # 320
-VIRTUAL_HEIGHT = WINDOW_HEIGHT / 3 # 180
-#320x180
+VIRTUAL_WIDTH = WINDOW_WIDTH / 3  # 320
+VIRTUAL_HEIGHT = WINDOW_HEIGHT / 3  # 180
+# 320x180
 
 
 BINDINGS = {
@@ -25,15 +24,26 @@ BINDINGS = {
 
 def main():
     pygame.init()
+
     display = VirtualDisplay(
         (VIRTUAL_WIDTH, VIRTUAL_HEIGHT),
         window_size=(WINDOW_WIDTH, WINDOW_HEIGHT),
         title="Retrace",
+        icon="game/assets/images/ui/skull.png"
     )
     clock = pygame.time.Clock()
 
     input_manager = InputManager(BINDINGS)
     audio_manager = AudioManager()
+    audio_manager.load_sounds({
+        "jump": "game/assets/sfx/jump.wav",
+        "interact": "game/assets/sfx/interact.wav",
+        "correct_clue": "game/assets/sfx/correctclue.wav",
+        "wrong_clue": "game/assets/sfx/wrongclue.wav",
+        "deathscene": "game/assets/sfx/deathscene.wav",
+        "reaching_reaper": "game/assets/sfx/reachingreaper.wav",
+        "select": "assets/sfx/select.wav",
+    })
 
     states = StateManager()
     states.push(build_menu_state(states, input_manager, audio_manager, (VIRTUAL_WIDTH, VIRTUAL_HEIGHT)))
@@ -49,7 +59,6 @@ def main():
                 running = False
             display.handle_event(event)
             states.handle_event(event)
-
 
         input_manager.mouse_pos.update(display.window_to_virtual(pygame.mouse.get_pos()))
 

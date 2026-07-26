@@ -9,7 +9,7 @@ from core.ui.pixel_font import PixelFont
 class DeathScene(GameState):
     DEFAULT_LEVEL_PATH = "game/assets/levels/death_1.json"
     DEFAULT_TILESETS_DIR = "game/assets/images/tilesets"
-    ADVANCE_KEYS = (pygame.K_SPACE, pygame.K_RETURN)
+    ADVANCE_KEYS = (pygame.K_SPACE, pygame.K_RETURN, pygame.K_e)
     MIN_DISPLAY_TIME = 1.0
 
     # How tight the shot is: the camera samples a world-space rect this
@@ -24,8 +24,9 @@ class DeathScene(GameState):
     # Used to find where it actually is so the shadow/skid marks below
     # stay lined up with it even if it gets moved in the editor.
 
-    def __init__(self, manager):
+    def __init__(self, manager, audio_manager=None):
         super().__init__(manager)
+        self.audio = audio_manager
         self.level = None
         self.camera = None
         self.size = None
@@ -96,6 +97,13 @@ class DeathScene(GameState):
 
         self.time_in_scene = 0.0
         self._build_impact_fx()
+
+        if self.audio:
+            # A death vignette is a different emotional register than the
+            # investigation itself - no carried-over run music here, just
+            # its own sting, then silence until gameplay actually starts.
+            self.audio.stop_music()
+            self.audio.play("deathscene")
 
     def handle_event(self, event):
         if self.time_in_scene < self.MIN_DISPLAY_TIME:

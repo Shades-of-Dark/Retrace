@@ -48,12 +48,56 @@ def get_image(sheet, frame, width, height, color, xoffset=0, yoffset=0, scale=0,
     pygame.Surface.set_colorkey(image, color)
     return image
 
+def to_alpha_surface(surface):
+    """Convert to a true per-pixel-alpha surface, mapping any existing
+    colorkey to alpha=0. Plain .convert_alpha() doesn't know about
+    colorkey transparency - it leaves those pixels opaque, which is why
+    colorkeyed sprites (most of this game's tile/item art) came out with
+    a solid black box where the "transparent" background used to be."""
+    colorkey = surface.get_colorkey()
+    out = surface.convert_alpha()
+    if colorkey is not None:
+        rgb = surfarray.pixels3d(out)
+        alpha = surfarray.pixels_alpha(out)
+        key = np.array(colorkey[:3])
+        alpha[np.all(rgb == key, axis=-1)] = 0
+        del rgb, alpha
+    return out
+
+
 def desaturate_surface(surface, amount=0.5):
-    arr = surfarray.array3d(surface).astype(np.float32)
-    gray = arr @ [0.299, 0.587, 0.114]
-    gray = np.stack([gray] * 3, axis=-1)
-    blended = arr * (1 - amount) + gray * amount
-    return surfarray.make_surface(blended.astype(np.uint8))
+    """Blend toward grayscale by `amount` (0-1). The single dim/gray
+    implementation shared by the whole-room desaturation effect and the
+    per-item "already checked" treatment - goes through to_alpha_surface
+    so it's equally correct on an opaque screen capture or a
+    colorkey-transparent sprite."""
+    out = to_alpha_surface(surface)
+    arr = surfarray.pixels3d(out)
+    gray = arr[..., 0] * 0.299 + arr[..., 1] * 0.587 + arr[..., 2] * 0.114
+    for c in range(3):
+        arr[..., c] = (arr[..., c] * (1 - amount) + gray * amount).astype(arr.dtype)
+    del arr
+    return out
+
+
+def additive_glow(image, color, amount):
+    """Adds `color` scaled by `amount` on top of image via BLEND_RGB_ADD -
+    additive light instead of interpolating toward a flat color, so it
+    reads as lighting up rather than fading (blending toward white
+    desaturates a sprite the same way blending toward gray does, just
+    lighter - not the effect we want for "correct" vs "wrong"). Uses
+    BLEND_RGB_ADD rather than BLEND_RGBA_ADD deliberately: it leaves alpha
+    untouched, so `image` must already be a true per-pixel-alpha surface
+    (see to_alpha_surface) - if it were colorkey-transparent instead, the
+    background's RGB would drift off the key color and stop being
+    recognized as transparent."""
+    glow_layer = pygame.Surface(image.get_size(), pygame.SRCALPHA)
+    r, g, b = color
+    glow_layer.fill((round(r * amount), round(g * amount), round(b * amount), 0))
+
+    result = image.copy()
+    result.blit(glow_layer, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+    return result
 
 
 def make_alpha_mask(mask_surf):

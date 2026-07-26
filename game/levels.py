@@ -3,18 +3,24 @@ from core.states import MenuState
 from game.deathscene import DeathScene
 from game.timeline_dat import get_timeline_stuff
 
+MENU_MUSIC = "assets/music/menushort.wav"
+MUSIC_FADE_MS = 500
+
 LEVELS = [
     {
         "death_path": "game/assets/levels/death_1.json",
         "tilesets_dir": "game/assets/images/tilesets",
+        "music_path": "assets/music/level1short.wav",
     },
     {
         "death_path": "game/assets/levels/death_2.json",
         "tilesets_dir": "game/assets/images/tilesets",
+        "music_path": "assets/music/level2short.wav",
     },
     {
         "death_path": "game/assets/levels/death_3.json",
         "tilesets_dir": "game/assets/images/tilesets",
+        "music_path": "assets/music/level3short.wav",
     }
 
 ]
@@ -41,7 +47,7 @@ def start_level(states, input_manager, audio_manager, size, level_index=0):
     level = get_level(level_index)
     timeline_state = build_timeline_state(states, input_manager, audio_manager, size, level_index)
     states.switch(
-        DeathScene(states),
+        DeathScene(states, audio_manager),
         size=size,
         next_state=timeline_state,
         level_path=level["death_path"],
@@ -51,6 +57,7 @@ def start_level(states, input_manager, audio_manager, size, level_index=0):
 
 
 def build_menu_state(states, input_manager, audio_manager, size):
+    audio_manager.play_music(MENU_MUSIC, loops=-1, fade_ms=MUSIC_FADE_MS)
     return MenuState(
         states, audio_manager, title="Retrace",
         on_start=lambda: start_level(states, input_manager, audio_manager, size, 0),

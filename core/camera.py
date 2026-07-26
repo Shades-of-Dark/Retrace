@@ -9,13 +9,24 @@ class Camera:
     bounds clamping. Works with a target that's a pygame.Rect, an Entity
     (anything with a .rect), or a raw position."""
 
-    def __init__(self, width, height, smoothing=0.1):
+    def __init__(self, width, height, smoothing=0.1, intro_smoothing=None, intro_settle_distance=6):
         self.width = width
         self.height = height
         self.offset = pygame.Vector2()
         self.smoothing = smoothing
         self.target = None
         self.bounds = None  # optional pygame.Rect limiting the camera in world space
+
+        # Optional slow-pan intro: while the camera is still far from its
+        # target (e.g. right after a level loads and offset starts at the
+        # origin), it eases in at intro_smoothing instead of the normal
+        # (much snappier) smoothing, so the opening pan reads as a
+        # deliberate look around the level rather than a jarring snap.
+        # Once within intro_settle_distance px of the target it hands off
+        # to normal smoothing for the rest of gameplay.
+        self.intro_smoothing = intro_smoothing
+        self.intro_settle_distance = intro_settle_distance
+        self._intro_active = intro_smoothing is not None
 
         self._shake_elapsed = 0.0
         self._shake_duration = 0.0
@@ -78,22 +89,33 @@ class Camera:
                 target_pos.x - self.width / 2,
                 target_pos.y - self.height / 2,
             )
-            if self.smoothing <= 0:
+            smoothing = self.smoothing
+            if self._intro_active:
+                if (desired - self.offset).length() <= self.intro_settle_distance:
+                    self._intro_active = False
+                else:
+                    smoothing = self.intro_smoothing
+
+            if smoothing <= 0:
                 self.offset = desired
             else:
-                t = min(1.0, self.smoothing * dt * 60)
+                t = min(1.0, smoothing * dt * 60)
                 self.offset += (desired - self.offset) * t
             if self.bounds:
                 self.offset.x = max(self.bounds.left, min(self.offset.x, self.bounds.right - self.width))
                 self.offset.y = max(self.bounds.top, min(self.offset.y, self.bounds.bottom - self.height))
         self._update_shake(dt)
 
+    @property
+    def total_offset(self):
+        return self.offset + self._shake_offset
+
     def apply(self, rect):
-        total = self.offset + self._shake_offset
+        total = self.total_offset
         return rect.move(-round(total.x), -round(total.y))
 
     def apply_pos(self, pos):
-        total = self.offset + self._shake_offset
+        total = self.total_offset
         return pygame.Vector2(pos[0] - total.x, pos[1] - total.y)
 
     def screen_to_world(self, pos):

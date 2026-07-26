@@ -19,12 +19,16 @@ class VirtualDisplay:
     for free with smooth=False (nearest-neighbor, the default).
     """
 
-    def __init__(self, virtual_size, window_size=None, title="", resizable=True, smooth=False):
+    def __init__(self, virtual_size, window_size=None, title="", resizable=True, smooth=False, icon=None):
         self.virtual_size = (int(virtual_size[0]), int(virtual_size[1]))
         flags = pygame.RESIZABLE if resizable else 0
         self.window = pygame.display.set_mode(window_size or self.virtual_size, flags)
         if title:
             pygame.display.set_caption(title)
+        if icon:
+            surf = pygame.image.load(icon).convert_alpha()
+            surf.set_colorkey((0,0,0))
+            pygame.display.set_icon(surf)
         self.surface = pygame.Surface(self.virtual_size).convert()
         self.smooth = smooth
         self._scale = 1.0
@@ -32,19 +36,14 @@ class VirtualDisplay:
         self._recalc_viewport()
 
     def handle_event(self, event):
-        """Feed every pygame event through this before your own event
-        handling. Keeps the viewport in sync when the window is resized,
-        and rewrites mouse positions from window space into virtual space
-        in place, so downstream UI/game code never sees window coordinates."""
+
         if event.type == pygame.VIDEORESIZE:
             self._recalc_viewport()
         elif event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             event.pos = self.window_to_virtual(event.pos)
 
     def window_to_virtual(self, pos):
-        """Convert a position in real window pixels to virtual-surface
-        pixels, clamped to the surface bounds (so dragging a slider past
-        the letterbox edge still reads as fully at 0 or max)."""
+
         x = (pos[0] - self._viewport.x) / self._scale
         y = (pos[1] - self._viewport.y) / self._scale
         vw, vh = self.virtual_size
@@ -59,8 +58,7 @@ class VirtualDisplay:
             (window_w - scaled_w) // 2, (window_h - scaled_h) // 2, scaled_w, scaled_h)
 
     def present(self):
-        """Scale the virtual surface onto the window and flip. Call once
-        per frame after everything has drawn onto self.surface."""
+
         self.window.fill((0, 0, 0))
         scale = pygame.transform.smoothscale if self.smooth else pygame.transform.scale
         self.window.blit(scale(self.surface, self._viewport.size), self._viewport)

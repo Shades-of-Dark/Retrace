@@ -55,12 +55,19 @@ class PauseState(GameState):
                          font=self.title_font, theme=self.theme))
 
         y = panel.rect.top + round(64 * scale)
-        panel.add(Button((left, y, button_width, button_height), "Resume", on_click=self._resume, theme=self.theme, font=font))
+        panel.add(Button((left, y, button_width, button_height), "Resume", on_click=self._click(self._resume), theme=self.theme, font=font))
         y += row_step
-        panel.add(Button((left, y, button_width, button_height), "Options", on_click=self._open_options, theme=self.theme, font=font))
+        panel.add(Button((left, y, button_width, button_height), "Options", on_click=self._click(self._open_options), theme=self.theme, font=font))
         y += row_step
         if self.on_quit:
-            panel.add(Button((left, y, button_width, button_height), self.quit_label, on_click=self.on_quit, theme=self.theme, font=font))
+            panel.add(Button((left, y, button_width, button_height), self.quit_label, on_click=self._click(self.on_quit), theme=self.theme, font=font))
+
+    def _click(self, callback):
+        def handler():
+            self.audio.play("select")
+            if callback:
+                callback()
+        return handler
 
     def _resume(self):
         self.manager.pop()
